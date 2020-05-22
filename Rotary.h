@@ -16,8 +16,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __Rotary_h__
-#define __Rotary_h__
+#ifndef __INO_ROTARY_Rotary_h__
+#define __INO_ROTARY_Rotary_h__
 
 // ---------------------------------------------------------------------------
 // Rotary_Traits
@@ -125,4 +125,4 @@ protected: // protected data
 // End-Of-File
 // ---------------------------------------------------------------------------
 
-#endif /* __Rotary_h__ */
+#endif /* __INO_ROTARY_Rotary_h__ */
