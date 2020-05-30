@@ -20,147 +20,139 @@
 #include "Rotary.h"
 
 // ---------------------------------------------------------------------------
-// some useful macros
-// ---------------------------------------------------------------------------
-
-#ifndef countof
-#define countof(array) (sizeof(array) / sizeof(array[0]))
-#endif
-
-// ---------------------------------------------------------------------------
 // some useful stuff
 // ---------------------------------------------------------------------------
 
 namespace {
 
-typedef void(*RotaryHandler)();
+Rotary* volatile rotary0 = nullptr;
+Rotary* volatile rotary1 = nullptr;
+Rotary* volatile rotary2 = nullptr;
+Rotary* volatile rotary3 = nullptr;
 
-void rotaryHandler0();
-void rotaryHandler1();
-void rotaryHandler2();
-void rotaryHandler3();
+typedef void (*RotaryHandlerProc)(void);
 
-Rotary* volatile rotaries[4] = {
-    nullptr,
-    nullptr,
-    nullptr,
-    nullptr,
-};
-
-RotaryHandler const handlers[4] = {
-    &rotaryHandler0,
-    &rotaryHandler1,
-    &rotaryHandler2,
-    &rotaryHandler3,
-};
-
-void rotaryHandler0()
+void rotaryHandler0(void)
 {
-    Rotary* rotary(rotaries[0]);
-
-    if(rotary != nullptr) {
-        rotary->read();
+    if(rotary0 != nullptr) {
+        rotary0->read();
     }
 }
 
-void rotaryHandler1()
+void rotaryHandler1(void)
 {
-    Rotary* rotary(rotaries[1]);
-
-    if(rotary != nullptr) {
-        rotary->read();
+    if(rotary1 != nullptr) {
+        rotary1->read();
     }
 }
 
-void rotaryHandler2()
+void rotaryHandler2(void)
 {
-    Rotary* rotary(rotaries[2]);
-
-    if(rotary != nullptr) {
-        rotary->read();
+    if(rotary2 != nullptr) {
+        rotary2->read();
     }
 }
 
-void rotaryHandler3()
+void rotaryHandler3(void)
 {
-    Rotary* rotary(rotaries[3]);
-
-    if(rotary != nullptr) {
-        rotary->read();
+    if(rotary3 != nullptr) {
+        rotary3->read();
     }
 }
 
 uint8_t findRotary(Rotary* rotary)
 {
-    constexpr uint8_t rotaryNotFound = static_cast<uint8_t>(-1);
+    if(rotary0 == rotary) return 0;
+    if(rotary1 == rotary) return 1;
+    if(rotary2 == rotary) return 2;
+    if(rotary3 == rotary) return 3;
 
-    constexpr uint8_t count = countof(rotaries);
-    for(uint8_t index = 0; index < count; ++index) {
-        Rotary* current(rotaries[index]);
-        if(current == rotary) {
-            return index;
-        }
-    }
-    return rotaryNotFound;
+    return static_cast<uint8_t>(-1);
 }
 
-bool attachRotaryToAnInterrupt(Rotary& rotary, const Rotary_Wiring& wiring)
+void attachRotaryToAnInterrupt(Rotary& rotary, const Rotary_Wiring& wiring)
 {
     constexpr uint8_t notAnInterrupt  = static_cast<uint8_t>(NOT_AN_INTERRUPT);
     const     uint8_t clkPinInterrupt = digitalPinToInterrupt(wiring.clkPin);
     const     uint8_t dirPinInterrupt = digitalPinToInterrupt(wiring.dirPin);
     const     uint8_t btnPinInterrupt = digitalPinToInterrupt(wiring.btnPin);
-    constexpr uint8_t rotaryNotFound  = static_cast<uint8_t>(-1);
     const     uint8_t rotaryIndex     = findRotary(nullptr);
+    RotaryHandlerProc rotaryHandler   = nullptr;
 
     if((clkPinInterrupt == notAnInterrupt)
     && (dirPinInterrupt == notAnInterrupt)
     && (btnPinInterrupt == notAnInterrupt)) {
-        return false;
+        return;
     }
-    if(rotaryIndex == rotaryNotFound) {
-        return false;
+    switch(rotaryIndex) {
+        case 0:
+            rotary0       = &rotary;
+            rotaryHandler = &rotaryHandler0;
+            break;
+        case 1:
+            rotary1       = &rotary;
+            rotaryHandler = &rotaryHandler1;
+            break;
+        case 2:
+            rotary2       = &rotary;
+            rotaryHandler = &rotaryHandler2;
+            break;
+        case 3:
+            rotary3       = &rotary;
+            rotaryHandler = &rotaryHandler3;
+            break;
+        default:
+            break;
     }
-    else {
-        rotaries[rotaryIndex] = &rotary;
+    if((clkPinInterrupt != notAnInterrupt) && (rotaryHandler != nullptr)) {
+        ::attachInterrupt(clkPinInterrupt, rotaryHandler, CHANGE);
     }
-    if(clkPinInterrupt != notAnInterrupt) {
-        ::attachInterrupt(clkPinInterrupt, handlers[rotaryIndex], CHANGE);
+    if((dirPinInterrupt != notAnInterrupt) && (rotaryHandler != nullptr)) {
+        ::attachInterrupt(dirPinInterrupt, rotaryHandler, CHANGE);
     }
-    if(dirPinInterrupt != notAnInterrupt) {
-        ::attachInterrupt(dirPinInterrupt, handlers[rotaryIndex], CHANGE);
+    if((btnPinInterrupt != notAnInterrupt) && (rotaryHandler != nullptr)) {
+        ::attachInterrupt(btnPinInterrupt, rotaryHandler, CHANGE);
     }
-    if(btnPinInterrupt != notAnInterrupt) {
-        ::attachInterrupt(btnPinInterrupt, handlers[rotaryIndex], CHANGE);
-    }
-    return true;
 }
 
-bool detachRotaryFromInterrupt(Rotary& rotary, const Rotary_Wiring& wiring)
+void detachRotaryFromInterrupt(Rotary& rotary, const Rotary_Wiring& wiring)
 {
     constexpr uint8_t notAnInterrupt  = static_cast<uint8_t>(NOT_AN_INTERRUPT);
     const     uint8_t clkPinInterrupt = digitalPinToInterrupt(wiring.clkPin);
     const     uint8_t dirPinInterrupt = digitalPinToInterrupt(wiring.dirPin);
     const     uint8_t btnPinInterrupt = digitalPinToInterrupt(wiring.btnPin);
-    constexpr uint8_t rotaryNotFound  = static_cast<uint8_t>(-1);
     const     uint8_t rotaryIndex     = findRotary(&rotary);
+    RotaryHandlerProc rotaryHandler   = nullptr;
 
-    if(rotaryIndex == rotaryNotFound) {
-        return false;
+    switch(rotaryIndex) {
+        case 0:
+            rotary0       = nullptr;
+            rotaryHandler = &rotaryHandler0;
+            break;
+        case 1:
+            rotary1       = nullptr;
+            rotaryHandler = &rotaryHandler1;
+            break;
+        case 2:
+            rotary2       = nullptr;
+            rotaryHandler = &rotaryHandler2;
+            break;
+        case 3:
+            rotary3       = nullptr;
+            rotaryHandler = &rotaryHandler3;
+            break;
+        default:
+            break;
     }
-    else {
-        rotaries[rotaryIndex] = nullptr;
-    }
-    if(clkPinInterrupt != notAnInterrupt) {
+    if((clkPinInterrupt != notAnInterrupt) && (rotaryHandler != nullptr)) {
         ::detachInterrupt(clkPinInterrupt);
     }
-    if(dirPinInterrupt != notAnInterrupt) {
+    if((dirPinInterrupt != notAnInterrupt) && (rotaryHandler != nullptr)) {
         ::detachInterrupt(dirPinInterrupt);
     }
-    if(btnPinInterrupt != notAnInterrupt) {
+    if((btnPinInterrupt != notAnInterrupt) && (rotaryHandler != nullptr)) {
         ::detachInterrupt(btnPinInterrupt);
     }
-    return true;
 }
 
 }
@@ -191,7 +183,7 @@ void Rotary::begin()
         reset();
     }
     /* attach to interrupt */ {
-        (void) attachRotaryToAnInterrupt(*this, _wiring);
+        attachRotaryToAnInterrupt(*this, _wiring);
     }
 }
 
@@ -206,7 +198,7 @@ void Rotary::reset()
 void Rotary::end()
 {
     /* detach from interrupt */ {
-        (void) detachRotaryFromInterrupt(*this, _wiring);
+        detachRotaryFromInterrupt(*this, _wiring);
     }
     /* reset */ {
         reset();
