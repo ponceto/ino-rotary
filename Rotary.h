@@ -1,5 +1,5 @@
 /*
- * Rotary.h - Copyright (c) 2014-2020 - Olivier Poncet
+ * Rotary.h - Copyright (c) 2014-2025 - Olivier Poncet
  *
  * This file is part of the Rotary library
  *
